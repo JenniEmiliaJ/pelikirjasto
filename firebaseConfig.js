@@ -6,12 +6,12 @@ import { initializeApp } from 'firebase/app';
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: import.meta.env.FIREBASE_API_KEY,
-  authDomain: 'pelikirjasto-78f68.firebaseapp.com',
-  databaseURL: 'https://pelikirjasto-78f68-default-rtdb.firebaseio.com',
-  projectId: 'pelikirjasto-78f68',
-  storageBucket: 'pelikirjasto-78f68.firebasestorage.app',
-  messagingSenderId: '738064481651',
-  appId: '1:738064481651:web:d19d98a53d1fcd81f9d906',
+  authDomain: 'pelikirjasto-cf54d.firebaseapp.com',
+  databaseURL: 'https://pelikirjasto-cf54d-default-rtdb.firebaseio.com',
+  projectId: 'pelikirjasto-cf54d',
+  storageBucket: 'pelikirjasto-cf54d.firebasestorage.app',
+  messagingSenderId: '274522609079',
+  appId: '1:274522609079:web:3c31a31a9c138b22c78432',
 };
 
 // Initialize Firebase
