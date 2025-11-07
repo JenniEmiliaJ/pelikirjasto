@@ -10,8 +10,8 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="SelaaPeleja">
-        <Stack.Screen name="Pelikirjasto" component={SelaaPeleja} />
-        <Stack.Screen name="Lisää peli" component={LisaaPeli} />
+        <Stack.Screen name="SelaaPeleja" component={SelaaPeleja} />
+        <Stack.Screen name="LisaaPeli" component={LisaaPeli} />
       </Stack.Navigator>
     </NavigationContainer>
   );
