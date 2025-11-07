@@ -1,11 +1,12 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
+import { FIREBASE_API_KEY } from '@env';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.FIREBASE_API_KEY,
+  apiKey: FIREBASE_API_KEY,
   authDomain: 'pelikirjasto-cf54d.firebaseapp.com',
   databaseURL: 'https://pelikirjasto-cf54d-default-rtdb.firebaseio.com',
   projectId: 'pelikirjasto-cf54d',
