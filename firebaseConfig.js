@@ -5,7 +5,7 @@ import { initializeApp } from 'firebase/app';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: 'AIzaSyDeY_MXlajO6pPeov9A8gtxPqFhPBuOrz4',
+  apiKey: import.meta.env.FIREBASE_API_KEY,
   authDomain: 'pelikirjasto-78f68.firebaseapp.com',
   databaseURL: 'https://pelikirjasto-78f68-default-rtdb.firebaseio.com',
   projectId: 'pelikirjasto-78f68',
