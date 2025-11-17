@@ -1,38 +1,82 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Alert, Button, TextInput } from 'react-native';
-import { useState } from 'react';
-
-import { app } from '../firebaseConfig';
 import {
-  getDatabase,
-  ref,
-  push,
-  query,
-  orderByChild,
-  equalTo,
-  get,
-  update,
-} from 'firebase/database';
+  StyleSheet,
+  View,
+  Alert,
+  Button,
+  TextInput,
+  ScrollView,
+  Image,
+  Text,
+  Modal,
+  TouchableOpacity,
+} from 'react-native';
+import { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
+import { app } from '../firebaseConfig';
+import { getDatabase, ref as dbRef, push } from 'firebase/database';
 
+const storage = getStorage(app);
 const database = getDatabase(app);
 
-export default function LisaaPeli() {
+export default function LisaaPeli({ navigation }) {
+  const TYPE_OPTIONS = [
+    'Strategia',
+    'Korttipeli',
+    'Seikkailu',
+    'Noppapeli',
+    'Yhteistyö',
+    'Resurssinhallinta',
+    'Perhepeli',
+    'Abstrakti',
+    'Nopea',
+    'Pakanrakennus',
+  ];
+
+  const [image, setImage] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState([]);
   const [peli, setPeli] = useState({
     pelinNimi: '',
-    pelinTyyppi: '',
     minPelaajat: '',
     maxPelaajat: '',
     minKesto: '',
     maxKesto: '',
-    kuva: '',
-    omistaja: '', // <-- pilkuilla erotettu syöte
+    omistaja: '',
   });
 
+  // Kuva laitteelta
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+    if (!result.canceled) setImage(result.assets[0].uri);
+  };
+
+  // Upload Firebase Storageen
+  const uploadImage = async () => {
+    if (!image) return null;
+    const response = await fetch(image);
+    const blob = await response.blob();
+    const filename = `${Date.now()}_${peli.pelinNimi}.jpg`;
+    const storageReference = storageRef(storage, `pelikuvat/${filename}`);
+    await uploadBytes(storageReference, blob);
+    const downloadURL = await getDownloadURL(storageReference);
+    return downloadURL;
+  };
+
+  // Tallenna peli
   const handleSave = async () => {
-    // tarkistus
     if (
       peli.pelinNimi &&
-      peli.pelinTyyppi &&
+      selectedTypes.length > 0 &&
       peli.minPelaajat &&
       peli.maxPelaajat &&
       peli.minKesto &&
@@ -40,120 +84,175 @@ export default function LisaaPeli() {
       peli.omistaja
     ) {
       try {
-        // jaetaan pilkulla erotettu syöte listaksi
         const uudetOmistajat = peli.omistaja
           .split(',')
-          .map((nimi) => nimi.trim())
+          .map((n) => n.trim())
           .filter((n) => n !== '');
+        const imageUrl = await uploadImage();
 
-        const pelitRef = ref(database, 'pelit/');
-        const peliQuery = query(
-          pelitRef,
-          orderByChild('pelinNimi'),
-          equalTo(peli.pelinNimi)
-        );
+        const uusiPeli = {
+          pelinKuva: imageUrl || null,
+          pelinNimi: peli.pelinNimi,
+          pelinTyyppi: selectedTypes,
+          minPelaajat: peli.minPelaajat,
+          maxPelaajat: peli.maxPelaajat,
+          minKesto: peli.minKesto,
+          maxKesto: peli.maxKesto,
+          omistaja: uudetOmistajat,
+        };
 
-        const snapshot = await get(peliQuery);
-
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const peliId = Object.keys(data)[0];
-          const peliData = data[peliId];
-
-          // onko vanhat omistajat taulukko:
-          const vanhatOmistajat = Array.isArray(peliData.omistaja)
-            ? peliData.omistaja
-            : peliData.omistaja
-            ? [peliData.omistaja]
-            : [];
-
-          const yhdistetytOmistajat = [
-            ...new Set([...vanhatOmistajat, ...uudetOmistajat]),
-          ];
-
-          await update(ref(database, `pelit/${peliId}`), {
-            omistaja: yhdistetytOmistajat,
-          });
-
-          Alert.alert(
-            'Onnistui',
-            `Lisättiin omistaja "${uudetOmistajat.join(', ')}" peliin "${
-              peli.pelinNimi
-            }".`
-          );
-        } else {
-          // uusi peli
-          const uusiPeli = {
-            pelinNimi: peli.pelinNimi,
-            pelinTyyppi: peli.pelinTyyppi,
-            minPelaajat: peli.minPelaajat,
-            maxPelaajat: peli.maxPelaajat,
-            minKesto: peli.minKesto,
-            maxKesto: peli.maxKesto,
-            kuva: peli.kuva,
-            omistaja: uudetOmistajat,
-          };
-
-          await push(pelitRef, uusiPeli);
-          Alert.alert('Onnistui', `Lisättiin uusi peli "${peli.pelinNimi}".`);
-        }
+        await push(dbRef(database, 'pelit/'), uusiPeli);
+        Alert.alert('Onnistui', `Lisättiin uusi peli "${peli.pelinNimi}".`);
+        navigation.goBack();
       } catch (error) {
         console.error('Virhe tallennuksessa:', error);
         Alert.alert('Virhe', 'Tietojen tallennus epäonnistui.');
       }
     } else {
-      Alert.alert('Virhe', 'Lisää ensin kaikki pelin tiedot.');
+      Alert.alert('Virhe', 'Täytä kaikki kentät ja valitse pelityyppi.');
     }
   };
 
+  // Toggle valinta
+  const toggleType = (type) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <TextInput
         placeholder="Pelin nimi"
-        onChangeText={(text) => setPeli({ ...peli, pelinNimi: text })}
+        style={styles.input}
         value={peli.pelinNimi}
+        onChangeText={(text) => setPeli({ ...peli, pelinNimi: text })}
       />
-      <TextInput
-        placeholder="Pelin tyyppi"
-        onChangeText={(text) => setPeli({ ...peli, pelinTyyppi: text })}
-        value={peli.pelinTyyppi}
-      />
+
       <TextInput
         placeholder="Min pelaajamäärä"
-        onChangeText={(text) => setPeli({ ...peli, minPelaajat: text })}
+        style={styles.input}
+        keyboardType="numeric"
         value={peli.minPelaajat}
+        onChangeText={(text) => setPeli({ ...peli, minPelaajat: text })}
       />
       <TextInput
         placeholder="Max pelaajamäärä"
-        onChangeText={(text) => setPeli({ ...peli, maxPelaajat: text })}
+        style={styles.input}
+        keyboardType="numeric"
         value={peli.maxPelaajat}
+        onChangeText={(text) => setPeli({ ...peli, maxPelaajat: text })}
       />
       <TextInput
         placeholder="Min pelin kesto"
-        onChangeText={(text) => setPeli({ ...peli, minKesto: text })}
+        style={styles.input}
+        keyboardType="numeric"
         value={peli.minKesto}
+        onChangeText={(text) => setPeli({ ...peli, minKesto: text })}
       />
       <TextInput
         placeholder="Max pelin kesto"
-        onChangeText={(text) => setPeli({ ...peli, maxKesto: text })}
+        style={styles.input}
+        keyboardType="numeric"
         value={peli.maxKesto}
+        onChangeText={(text) => setPeli({ ...peli, maxKesto: text })}
       />
       <TextInput
         placeholder="Omistaja"
-        onChangeText={(text) => setPeli({ ...peli, omistaja: text })}
+        style={styles.input}
         value={peli.omistaja}
+        onChangeText={(text) => setPeli({ ...peli, omistaja: text })}
       />
-      <Button onPress={handleSave} title="Tallenna peli" />
-    </View>
+
+      {selectedTypes.length > 0 && (
+        <Text style={{ alignSelf: 'flex-start', marginVertical: 6 }}>
+          Valitut: {selectedTypes.join(', ')}
+        </Text>
+      )}
+
+            <Button
+        title="Valitse pelityypit"
+        
+        onPress={() => setModalVisible(true)}
+      />
+
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: 'white',
+              margin: 20,
+              borderRadius: 8,
+              padding: 20,
+            }}
+          >
+            {TYPE_OPTIONS.map((type) => (
+              <TouchableOpacity
+                key={type}
+                onPress={() => toggleType(type)}
+                style={{
+                  padding: 10,
+                  marginVertical: 4,
+                  borderRadius: 4,
+                  backgroundColor: selectedTypes.includes(type)
+                    ? '#4A148C'
+                    : '#eee',
+                }}
+              >
+                <Text
+                  style={{
+                    color: selectedTypes.includes(type) ? 'white' : 'black',
+                  }}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <Button title="Sulje" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Button title="Valitse kuva" onPress={pickImage} />
+      {image && <Image source={{ uri: image }} style={styles.image} />}
+
+      <View style={{ marginVertical: 16 }}>
+        <Button title="Tallenna peli" onPress={handleSave} />
+      </View>
+
+      <StatusBar style="auto" />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
+    padding: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
+    marginVertical: 6,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    marginVertical: 10,
+    borderRadius: 12,
   },
 });
