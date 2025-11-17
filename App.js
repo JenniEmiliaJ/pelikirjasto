@@ -6,6 +6,7 @@ import * as React from 'react';
 
 import SelaaPeleja from './components/SelaaPeleja';
 import LisaaPeli from './components/LisaaPeli';
+import MuokkaaPeli from './components/MuokkaaPeli';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +30,7 @@ export default function App() {
         <Stack.Navigator initialRouteName="SelaaPeleja">
           <Stack.Screen name="SelaaPeleja" component={SelaaPeleja} />
           <Stack.Screen name="LisaaPeli" component={LisaaPeli} />
+          <Stack.Screen name="MuokkaaPeli" component={MuokkaaPeli} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>

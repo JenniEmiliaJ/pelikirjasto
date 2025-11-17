@@ -84,6 +84,20 @@ export default function LisaaPeli({ navigation }) {
       peli.omistaja
     ) {
       try {
+      
+        // haetaan tietokannassa olevat pelit
+      const pelitSnapshot = await get(dbRef(database, 'pelit/'));
+      const pelitData = pelitSnapshot.val() || {};
+
+      // Tarkistetaan löytyykö peli jo pelikirjastosta: 
+      const nimiOnKaytossa = Object.values(pelitData).some(
+        (p) => p.pelinNimi.toLowerCase() === peli.pelinNimi.toLowerCase()
+      );
+
+      if (nimiOnKaytossa) {
+        Alert.alert('Virhe', 'Tämän niminen peli löytyy jo pelikirjastosta');
+        return;
+      }
         const uudetOmistajat = peli.omistaja
           .split(',')
           .map((n) => n.trim())
@@ -170,9 +184,8 @@ export default function LisaaPeli({ navigation }) {
         </Text>
       )}
 
-            <Button
+      <Button
         title="Valitse pelityypit"
-        
         onPress={() => setModalVisible(true)}
       />
 
