@@ -2,41 +2,28 @@ import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
   View,
-  Alert,
-  Button,
-  TextInput,
   ScrollView,
   Image,
   Text,
   Modal,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
+import { Card, Button, TextInput } from 'react-native-paper';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from 'firebase/storage';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getDatabase, ref as dbRef, push, get } from 'firebase/database';
 import { app } from '../firebaseConfig';
-import { getDatabase, ref as dbRef, push } from 'firebase/database';
 
 const storage = getStorage(app);
 const database = getDatabase(app);
 
 export default function LisaaPeli({ navigation }) {
   const TYPE_OPTIONS = [
-    'Strategia',
-    'Korttipeli',
-    'Seikkailu',
-    'Noppapeli',
-    'Yhteistyö',
-    'Resurssinhallinta',
-    'Perhepeli',
-    'Abstrakti',
-    'Nopea',
-    'Pakanrakennus',
+    'Strategia','Korttipeli','Seikkailu','Noppapeli','Yhteistyö',
+    'Resurssinhallinta','Perhepeli','Abstrakti','Nopea','Pakanrakennus'
   ];
 
   const [image, setImage] = useState(null);
@@ -53,10 +40,19 @@ export default function LisaaPeli({ navigation }) {
 
   // Kuva laitteelta
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Lupa tarvitaan', 'Sovellus tarvitsee luvan kuvien käyttöön.');
+        return;
+      }
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
+
     if (!result.canceled) setImage(result.assets[0].uri);
   };
 
@@ -84,24 +80,19 @@ export default function LisaaPeli({ navigation }) {
       peli.omistaja
     ) {
       try {
-      
-        // haetaan tietokannassa olevat pelit
-      const pelitSnapshot = await get(dbRef(database, 'pelit/'));
-      const pelitData = pelitSnapshot.val() || {};
+        const pelitSnapshot = await get(dbRef(database, 'pelit/'));
+        const pelitData = pelitSnapshot.val() || {};
 
-      // Tarkistetaan löytyykö peli jo pelikirjastosta: 
-      const nimiOnKaytossa = Object.values(pelitData).some(
-        (p) => p.pelinNimi.toLowerCase() === peli.pelinNimi.toLowerCase()
-      );
+        const nimiOnKaytossa = Object.values(pelitData).some(
+          (p) => p.pelinNimi.toLowerCase() === peli.pelinNimi.toLowerCase()
+        );
 
-      if (nimiOnKaytossa) {
-        Alert.alert('Virhe', 'Tämän niminen peli löytyy jo pelikirjastosta');
-        return;
-      }
-        const uudetOmistajat = peli.omistaja
-          .split(',')
-          .map((n) => n.trim())
-          .filter((n) => n !== '');
+        if (nimiOnKaytossa) {
+          Alert.alert('Virhe', 'Tämän niminen peli löytyy jo pelikirjastosta');
+          return;
+        }
+
+        const uudetOmistajat = peli.omistaja.split(',').map(n => n.trim()).filter(n => n !== '');
         const imageUrl = await uploadImage();
 
         const uusiPeli = {
@@ -119,7 +110,7 @@ export default function LisaaPeli({ navigation }) {
         Alert.alert('Onnistui', `Lisättiin uusi peli "${peli.pelinNimi}".`);
         navigation.goBack();
       } catch (error) {
-        console.error('Virhe tallennuksessa:', error);
+        console.error(error);
         Alert.alert('Virhe', 'Tietojen tallennus epäonnistui.');
       }
     } else {
@@ -127,122 +118,103 @@ export default function LisaaPeli({ navigation }) {
     }
   };
 
-  // Toggle valinta
   const toggleType = (type) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TextInput
-        placeholder="Pelin nimi"
-        style={styles.input}
-        value={peli.pelinNimi}
-        onChangeText={(text) => setPeli({ ...peli, pelinNimi: text })}
-      />
+      <Card style={styles.card}>
+        <Card.Title title="Lisää uusi peli" titleStyle={{ color: '#fff' }} />
+        <Card.Content>
+          <TextInput
+            label="Pelin nimi"
+            value={peli.pelinNimi}
+            onChangeText={text => setPeli({ ...peli, pelinNimi: text })}
+            style={styles.input}
+          />
+          <TextInput
+            label="Min pelaajamäärä"
+            value={peli.minPelaajat}
+            onChangeText={text => setPeli({ ...peli, minPelaajat: text })}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Max pelaajamäärä"
+            value={peli.maxPelaajat}
+            onChangeText={text => setPeli({ ...peli, maxPelaajat: text })}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Min pelin kesto"
+            value={peli.minKesto}
+            onChangeText={text => setPeli({ ...peli, minKesto: text })}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Max pelin kesto"
+            value={peli.maxKesto}
+            onChangeText={text => setPeli({ ...peli, maxKesto: text })}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Omistaja"
+            value={peli.omistaja}
+            onChangeText={text => setPeli({ ...peli, omistaja: text })}
+            style={styles.input}
+          />
 
-      <TextInput
-        placeholder="Min pelaajamäärä"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peli.minPelaajat}
-        onChangeText={(text) => setPeli({ ...peli, minPelaajat: text })}
-      />
-      <TextInput
-        placeholder="Max pelaajamäärä"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peli.maxPelaajat}
-        onChangeText={(text) => setPeli({ ...peli, maxPelaajat: text })}
-      />
-      <TextInput
-        placeholder="Min pelin kesto"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peli.minKesto}
-        onChangeText={(text) => setPeli({ ...peli, minKesto: text })}
-      />
-      <TextInput
-        placeholder="Max pelin kesto"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peli.maxKesto}
-        onChangeText={(text) => setPeli({ ...peli, maxKesto: text })}
-      />
-      <TextInput
-        placeholder="Omistaja"
-        style={styles.input}
-        value={peli.omistaja}
-        onChangeText={(text) => setPeli({ ...peli, omistaja: text })}
-      />
+          {selectedTypes.length > 0 && (
+            <Text style={{ marginBottom: 12 }}>Valitut: {selectedTypes.join(', ')}</Text>
+          )}
 
-      {selectedTypes.length > 0 && (
-        <Text style={{ alignSelf: 'flex-start', marginVertical: 6 }}>
-          Valitut: {selectedTypes.join(', ')}
-        </Text>
-      )}
+          <Button mode="outlined" onPress={() => setModalVisible(true)} style={{ marginBottom: 12, backgroundColor: '#fff' }}>
+            Valitse pelityypit
+          </Button>
 
-      <Button
-        title="Valitse pelityypit"
-        onPress={() => setModalVisible(true)}
-      />
+          <Button mode="contained" onPress={pickImage} style={{ marginBottom: 12 }}>
+            Valitse kuva
+          </Button>
+          {image && <Image source={{ uri: image }} style={styles.image} />}
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: 'white',
-              margin: 20,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            {TYPE_OPTIONS.map((type) => (
-              <TouchableOpacity
-                key={type}
-                onPress={() => toggleType(type)}
-                style={{
-                  padding: 10,
-                  marginVertical: 4,
-                  borderRadius: 4,
-                  backgroundColor: selectedTypes.includes(type)
-                    ? '#4A148C'
-                    : '#eee',
-                }}
-              >
-                <Text
+          <Button mode="contained" onPress={handleSave}>
+            Tallenna peli
+          </Button>
+        </Card.Content>
+      </Card>
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalBackground}>
+          <Card>
+            <Card.Title title="Valitse pelityypit" />
+            <Card.Content>
+              {TYPE_OPTIONS.map(type => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => toggleType(type)}
                   style={{
-                    color: selectedTypes.includes(type) ? 'white' : 'black',
+                    padding: 10,
+                    marginVertical: 4,
+                    borderRadius: 4,
+                    backgroundColor: selectedTypes.includes(type) ? '#6200ee' : '#eee',
                   }}
                 >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            <Button title="Sulje" onPress={() => setModalVisible(false)} />
-          </View>
+                  <Text style={{ color: selectedTypes.includes(type) ? '#fff' : '#000' }}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </Card.Content>
+            <Card.Actions>
+              <Button onPress={() => setModalVisible(false)}>Sulje</Button>
+            </Card.Actions>
+          </Card>
         </View>
       </Modal>
-
-      <Button title="Valitse kuva" onPress={pickImage} />
-      {image && <Image source={{ uri: image }} style={styles.image} />}
-
-      <View style={{ marginVertical: 16 }}>
-        <Button title="Tallenna peli" onPress={handleSave} />
-      </View>
 
       <StatusBar style="auto" />
     </ScrollView>
@@ -252,20 +224,28 @@ export default function LisaaPeli({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    backgroundColor: '#212121',
     alignItems: 'center',
   },
-  input: {
+  card: {
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    marginVertical: 6,
+    marginBottom: 16,
+    backgroundColor: '#333',
+  },
+  input: {
+    marginBottom: 12,
+    backgroundColor: '#fff',
   },
   image: {
-    width: 200,
+    width: '100%',
     height: 200,
-    marginVertical: 10,
     borderRadius: 12,
+    marginBottom: 12,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
 });

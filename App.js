@@ -7,6 +7,7 @@ import * as React from 'react';
 import SelaaPeleja from './components/SelaaPeleja';
 import LisaaPeli from './components/LisaaPeli';
 import MuokkaaPeli from './components/MuokkaaPeli';
+import EtsiPeli from './components/EtsiPeli';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,6 +32,7 @@ export default function App() {
           <Stack.Screen name="SelaaPeleja" component={SelaaPeleja} />
           <Stack.Screen name="LisaaPeli" component={LisaaPeli} />
           <Stack.Screen name="MuokkaaPeli" component={MuokkaaPeli} />
+          <Stack.Screen name="EtsiPeli" component={EtsiPeli} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>

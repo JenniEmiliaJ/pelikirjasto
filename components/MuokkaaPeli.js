@@ -2,37 +2,50 @@ import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
   View,
-  Alert,
-  Button,
-  TextInput,
   ScrollView,
   Image,
   Text,
   Modal,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { Card, Button, TextInput } from 'react-native-paper';
+import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getDatabase, ref as dbRef, update } from 'firebase/database';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage';
+
+import { getDatabase, ref as dbRef, update, remove } from 'firebase/database';
 import { app } from '../firebaseConfig';
 
 const storage = getStorage(app);
 const database = getDatabase(app);
 
 export default function MuokkaaPeli({ navigation, route }) {
-  const { peli, peliId } = route.params; // Peli ja sen id route paramsista
+  const { peli, peliId } = route.params;
 
   const TYPE_OPTIONS = [
-    'Strategia', 'Korttipeli', 'Seikkailu', 'Noppapeli',
-    'Yhteistyö', 'Resurssinhallinta', 'Perhepeli', 'Abstrakti',
-    'Nopea', 'Pakanrakennus'
+    'Strategia',
+    'Korttipeli',
+    'Seikkailu',
+    'Noppapeli',
+    'Yhteistyö',
+    'Resurssinhallinta',
+    'Perhepeli',
+    'Abstrakti',
+    'Nopea',
+    'Pakanrakennus',
   ];
 
   const [selectedTypes, setSelectedTypes] = useState(peli.pelinTyyppi || []);
   const [modalVisible, setModalVisible] = useState(false);
   const [image, setImage] = useState(peli.pelinKuva || null);
-
   const [peliData, setPeliData] = useState({
     pelinNimi: peli.pelinNimi || '',
     minPelaajat: peli.minPelaajat || '',
@@ -42,12 +55,24 @@ export default function MuokkaaPeli({ navigation, route }) {
     omistaja: peli.omistaja?.join(', ') || '',
   });
 
-  // Valitse kuva
   const pickImage = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Lupa tarvitaan',
+          'Sovellus tarvitsee luvan kuvien käyttöön.'
+        );
+        return;
+      }
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
+
     if (!result.canceled) setImage(result.assets[0].uri);
   };
 
@@ -62,9 +87,10 @@ export default function MuokkaaPeli({ navigation, route }) {
     return downloadURL;
   };
 
-  // Toggle tyyppi modalista
   const toggleType = (type) => {
-    setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
   };
 
   const handleSave = async () => {
@@ -78,7 +104,10 @@ export default function MuokkaaPeli({ navigation, route }) {
       peliData.omistaja
     ) {
       try {
-        const uudetOmistajat = peliData.omistaja.split(',').map(n => n.trim()).filter(n => n !== '');
+        const uudetOmistajat = peliData.omistaja
+          .split(',')
+          .map((n) => n.trim())
+          .filter((n) => n !== '');
         const imageUrl = await uploadImage();
 
         const uusiPeli = {
@@ -96,7 +125,7 @@ export default function MuokkaaPeli({ navigation, route }) {
         Alert.alert('Onnistui', 'Peli päivitetty!');
         navigation.goBack();
       } catch (error) {
-        console.error('Virhe tallennuksessa:', error);
+        console.error(error);
         Alert.alert('Virhe', 'Tietojen tallennus epäonnistui.');
       }
     } else {
@@ -104,91 +133,168 @@ export default function MuokkaaPeli({ navigation, route }) {
     }
   };
 
+  const handleDelete = async () => {
+    Alert.alert(
+      'Vahvista poisto',
+      `Haluatko varmasti poistaa pelin "${peli.pelinNimi}"?`,
+      [
+        { text: 'Peruuta', style: 'cancel' },
+        {
+          text: 'Poista',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Poista kuva Firebase Storagesta jos olemassa
+              if (peli.pelinKuva) {
+                const imageRef = storageRef(storage, peli.pelinKuva);
+                await deleteObject(imageRef).catch(() => {});
+              }
+              await remove(dbRef(database, `pelit/${peliId}`));
+              Alert.alert('Onnistui', 'Peli poistettu.');
+              navigation.goBack();
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Virhe', 'Pelien poisto epäonnistui.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TextInput
-        placeholder="Pelin nimi"
-        style={styles.input}
-        value={peliData.pelinNimi}
-        onChangeText={(text) => setPeliData({ ...peliData, pelinNimi: text })}
-      />
+      <Card style={styles.card}>
+        <Card.Title title="Muokkaa peliä" titleStyle={{ color: '#fff' }} />
+        <Card.Content>
+          <TextInput
+            label="Pelin nimi"
+            value={peliData.pelinNimi}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, pelinNimi: text })
+            }
+            style={styles.input}
+          />
+          <TextInput
+            label="Min pelaajamäärä"
+            value={peliData.minPelaajat}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, minPelaajat: text })
+            }
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Max pelaajamäärä"
+            value={peliData.maxPelaajat}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, maxPelaajat: text })
+            }
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Min pelin kesto"
+            value={peliData.minKesto}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, minKesto: text })
+            }
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Max pelin kesto"
+            value={peliData.maxKesto}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, maxKesto: text })
+            }
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TextInput
+            label="Omistaja"
+            value={peliData.omistaja}
+            onChangeText={(text) =>
+              setPeliData({ ...peliData, omistaja: text })
+            }
+            style={styles.input}
+          />
 
-      <TextInput
-        placeholder="Min pelaajamäärä"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peliData.minPelaajat}
-        onChangeText={(text) => setPeliData({ ...peliData, minPelaajat: text })}
-      />
-      <TextInput
-        placeholder="Max pelaajamäärä"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peliData.maxPelaajat}
-        onChangeText={(text) => setPeliData({ ...peliData, maxPelaajat: text })}
-      />
-      <TextInput
-        placeholder="Min pelin kesto"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peliData.minKesto}
-        onChangeText={(text) => setPeliData({ ...peliData, minKesto: text })}
-      />
-      <TextInput
-        placeholder="Max pelin kesto"
-        style={styles.input}
-        keyboardType="numeric"
-        value={peliData.maxKesto}
-        onChangeText={(text) => setPeliData({ ...peliData, maxKesto: text })}
-      />
-      <TextInput
-        placeholder="Omistaja"
-        style={styles.input}
-        value={peliData.omistaja}
-        onChangeText={(text) => setPeliData({ ...peliData, omistaja: text })}
-      />
+          {selectedTypes.length > 0 && (
+            <Text style={{ marginBottom: 12, color: '#fff' }}>
+              Valitut: {selectedTypes.join(', ')}
+            </Text>
+          )}
 
-      {selectedTypes.length > 0 && (
-        <Text style={{ alignSelf: 'flex-start', marginVertical: 6 }}>
-          Valitut: {selectedTypes.join(', ')}
-        </Text>
-      )}
+          <Button
+            mode="outlined"
+            onPress={() => setModalVisible(true)}
+            style={{ marginBottom: 12, backgroundColor: '#fff' }}
+          >
+            Valitse pelityypit
+          </Button>
 
-      <Button title="Valitse pelityypit" onPress={() => setModalVisible(true)} />
+          <Button
+            mode="contained"
+            onPress={pickImage}
+            style={{ marginBottom: 12 }}
+          >
+            Valitse kuva
+          </Button>
+          {image && <Image source={{ uri: image }} style={styles.image} />}
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={{ flex:1, justifyContent:'center', backgroundColor:'rgba(0,0,0,0.5)' }}>
-          <View style={{ backgroundColor:'white', margin:20, borderRadius:8, padding:20 }}>
-            {TYPE_OPTIONS.map((type) => (
-              <TouchableOpacity
-                key={type}
-                onPress={() => toggleType(type)}
-                style={{
-                  padding:10,
-                  marginVertical:4,
-                  borderRadius:4,
-                  backgroundColor: selectedTypes.includes(type) ? '#4A148C' : '#eee'
-                }}
-              >
-                <Text style={{ color: selectedTypes.includes(type) ? 'white':'black' }}>{type}</Text>
-              </TouchableOpacity>
-            ))}
-            <Button title="Sulje" onPress={() => setModalVisible(false)} />
-          </View>
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            style={{ marginBottom: 12 }}
+          >
+            Tallenna peli
+          </Button>
+
+          <Button
+            mode="contained"
+            buttonColor="#660214ff"
+            onPress={handleDelete}
+          >
+            Poista peli
+          </Button>
+        </Card.Content>
+      </Card>
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalBackground}>
+          <Card>
+            <Card.Title title="Valitse pelityypit" />
+            <Card.Content>
+              {TYPE_OPTIONS.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => toggleType(type)}
+                  style={{
+                    padding: 10,
+                    marginVertical: 4,
+                    borderRadius: 4,
+                    backgroundColor: selectedTypes.includes(type)
+                      ? '#6200ee'
+                      : '#eee',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: selectedTypes.includes(type) ? '#fff' : '#000',
+                    }}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </Card.Content>
+            <Card.Actions>
+              <Button onPress={() => setModalVisible(false)}>Sulje</Button>
+            </Card.Actions>
+          </Card>
         </View>
       </Modal>
-
-      <Button title="Valitse kuva" onPress={pickImage} />
-      {image && <Image source={{ uri: image }} style={styles.image} />}
-
-      <View style={{ marginVertical:16 }}>
-        <Button title="Tallenna peli" onPress={handleSave} />
-      </View>
 
       <StatusBar style="auto" />
     </ScrollView>
@@ -197,21 +303,29 @@ export default function MuokkaaPeli({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding:16,
-    alignItems:'center',
+    padding: 16,
+    backgroundColor: '#212121',
+    alignItems: 'center',
+  },
+  card: {
+    width: '100%',
+    marginBottom: 16,
+    backgroundColor: '#333',
   },
   input: {
-    width:'100%',
-    borderWidth:1,
-    borderColor:'#ccc',
-    borderRadius:8,
-    padding:8,
-    marginVertical:6,
+    marginBottom: 12,
+    backgroundColor: '#fff',
   },
   image: {
-    width:200,
-    height:200,
-    marginVertical:10,
-    borderRadius:12,
-  }
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
 });
