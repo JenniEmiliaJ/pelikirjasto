@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { Card, Button, TextInput } from 'react-native-paper';
+import { Card, Button, TextInput, Chip } from 'react-native-paper';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -69,7 +69,7 @@ export default function MuokkaaPeli({ navigation, route }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       quality: 0.7,
     });
 
@@ -162,6 +162,10 @@ export default function MuokkaaPeli({ navigation, route }) {
     );
   };
 
+    const removeType = (typeToRemove) => {
+    setSelectedTypes((prev) => prev.filter((type) => type !== typeToRemove));
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Card style={styles.card}>
@@ -220,11 +224,7 @@ export default function MuokkaaPeli({ navigation, route }) {
             style={styles.input}
           />
 
-          {selectedTypes.length > 0 && (
-            <Text style={{ marginBottom: 12, color: '#fff' }}>
-              Valitut: {selectedTypes.join(', ')}
-            </Text>
-          )}
+
 
           <Button
             mode="outlined"
@@ -234,10 +234,22 @@ export default function MuokkaaPeli({ navigation, route }) {
             Valitse pelityypit
           </Button>
 
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {selectedTypes.map((type) => (
+              <Chip
+                key={type}
+                onLongPress={() => removeType(type)}
+                style={{ margin: 1 }}
+              >
+                {type}
+              </Chip>
+            ))}
+          </View>
+
           <Button
             mode="contained"
             onPress={pickImage}
-            style={{ marginBottom: 12 }}
+            style={{ marginVertical: 12 }}
           >
             Valitse kuva
           </Button>
@@ -299,6 +311,7 @@ export default function MuokkaaPeli({ navigation, route }) {
       <StatusBar style="auto" />
     </ScrollView>
   );
+
 }
 
 const styles = StyleSheet.create({

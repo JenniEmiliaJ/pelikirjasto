@@ -10,10 +10,15 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { Card, Button, TextInput } from 'react-native-paper';
+import { Card, Button, TextInput, Chip } from 'react-native-paper';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 import { getDatabase, ref as dbRef, push, get } from 'firebase/database';
 import { app } from '../firebaseConfig';
 
@@ -22,8 +27,16 @@ const database = getDatabase(app);
 
 export default function LisaaPeli({ navigation }) {
   const TYPE_OPTIONS = [
-    'Strategia','Korttipeli','Seikkailu','Noppapeli','Yhteistyö',
-    'Resurssinhallinta','Perhepeli','Abstrakti','Nopea','Pakanrakennus'
+    'Strategia',
+    'Korttipeli',
+    'Seikkailu',
+    'Noppapeli',
+    'Yhteistyö',
+    'Resurssinhallinta',
+    'Perhepeli',
+    'Abstrakti',
+    'Nopea',
+    'Pakanrakennus',
   ];
 
   const [image, setImage] = useState(null);
@@ -41,15 +54,19 @@ export default function LisaaPeli({ navigation }) {
   // Kuva laitteelta
   const pickImage = async () => {
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Lupa tarvitaan', 'Sovellus tarvitsee luvan kuvien käyttöön.');
+        Alert.alert(
+          'Lupa tarvitaan',
+          'Sovellus tarvitsee luvan kuvien käyttöön.'
+        );
         return;
       }
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaType.Images,
       quality: 0.7,
     });
 
@@ -92,7 +109,10 @@ export default function LisaaPeli({ navigation }) {
           return;
         }
 
-        const uudetOmistajat = peli.omistaja.split(',').map(n => n.trim()).filter(n => n !== '');
+        const uudetOmistajat = peli.omistaja
+          .split(',')
+          .map((n) => n.trim())
+          .filter((n) => n !== '');
         const imageUrl = await uploadImage();
 
         const uusiPeli = {
@@ -119,9 +139,13 @@ export default function LisaaPeli({ navigation }) {
   };
 
   const toggleType = (type) => {
-    setSelectedTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
+  };
+
+  const removeType = (typeToRemove) => {
+    setSelectedTypes((prev) => prev.filter((type) => type !== typeToRemove));
   };
 
   return (
@@ -132,53 +156,73 @@ export default function LisaaPeli({ navigation }) {
           <TextInput
             label="Pelin nimi"
             value={peli.pelinNimi}
-            onChangeText={text => setPeli({ ...peli, pelinNimi: text })}
+            onChangeText={(text) => setPeli({ ...peli, pelinNimi: text })}
             style={styles.input}
           />
           <TextInput
             label="Min pelaajamäärä"
             value={peli.minPelaajat}
-            onChangeText={text => setPeli({ ...peli, minPelaajat: text })}
+            onChangeText={(text) => setPeli({ ...peli, minPelaajat: text })}
             keyboardType="numeric"
             style={styles.input}
           />
           <TextInput
             label="Max pelaajamäärä"
             value={peli.maxPelaajat}
-            onChangeText={text => setPeli({ ...peli, maxPelaajat: text })}
+            onChangeText={(text) => setPeli({ ...peli, maxPelaajat: text })}
             keyboardType="numeric"
             style={styles.input}
           />
           <TextInput
             label="Min pelin kesto"
             value={peli.minKesto}
-            onChangeText={text => setPeli({ ...peli, minKesto: text })}
+            onChangeText={(text) => setPeli({ ...peli, minKesto: text })}
             keyboardType="numeric"
             style={styles.input}
           />
           <TextInput
             label="Max pelin kesto"
             value={peli.maxKesto}
-            onChangeText={text => setPeli({ ...peli, maxKesto: text })}
+            onChangeText={(text) => setPeli({ ...peli, maxKesto: text })}
             keyboardType="numeric"
             style={styles.input}
           />
           <TextInput
             label="Omistaja"
             value={peli.omistaja}
-            onChangeText={text => setPeli({ ...peli, omistaja: text })}
+            onChangeText={(text) => setPeli({ ...peli, omistaja: text })}
             style={styles.input}
           />
 
-          {selectedTypes.length > 0 && (
-            <Text style={{ marginBottom: 12 }}>Valitut: {selectedTypes.join(', ')}</Text>
-          )}
+          {/*selectedTypes.length > 0 && (
+            <Text style={{ marginBottom: 12, color: '#fff' }}>Valitut: {selectedTypes.join(', ')}</Text>
+          )*/}
 
-          <Button mode="outlined" onPress={() => setModalVisible(true)} style={{ marginBottom: 12, backgroundColor: '#fff' }}>
+          <Button
+            mode="outlined"
+            onPress={() => setModalVisible(true)}
+            style={{ marginBottom: 12, backgroundColor: '#fff' }}
+          >
             Valitse pelityypit
           </Button>
 
-          <Button mode="contained" onPress={pickImage} style={{ marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {selectedTypes.map((type) => (
+              <Chip
+                key={type}
+                onLongPress={() => removeType(type)}
+                style={{ margin: 1, marginBottom: 12 }}
+              >
+                {type}
+              </Chip>
+            ))}
+          </View>
+
+          <Button
+            mode="contained"
+            onPress={pickImage}
+            style={{ marginBottom: 12 }}
+          >
             Valitse kuva
           </Button>
           {image && <Image source={{ uri: image }} style={styles.image} />}
@@ -194,7 +238,7 @@ export default function LisaaPeli({ navigation }) {
           <Card>
             <Card.Title title="Valitse pelityypit" />
             <Card.Content>
-              {TYPE_OPTIONS.map(type => (
+              {TYPE_OPTIONS.map((type) => (
                 <TouchableOpacity
                   key={type}
                   onPress={() => toggleType(type)}
@@ -202,10 +246,18 @@ export default function LisaaPeli({ navigation }) {
                     padding: 10,
                     marginVertical: 4,
                     borderRadius: 4,
-                    backgroundColor: selectedTypes.includes(type) ? '#6200ee' : '#eee',
+                    backgroundColor: selectedTypes.includes(type)
+                      ? '#4A148C'
+                      : '#eee',
                   }}
                 >
-                  <Text style={{ color: selectedTypes.includes(type) ? '#fff' : '#000' }}>{type}</Text>
+                  <Text
+                    style={{
+                      color: selectedTypes.includes(type) ? '#fff' : '#000',
+                    }}
+                  >
+                    {type}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </Card.Content>

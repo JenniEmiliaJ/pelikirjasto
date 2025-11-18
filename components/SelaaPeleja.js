@@ -150,31 +150,6 @@ export default function SelaaPeleja({ navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          padding: 16,
-        }}
-      >
-        <Button
-          mode="contained"
-          icon="magnify"
-          onPress={() => navigation.navigate('EtsiPeli')}
-          textColor="#ffffff"
-        >
-          Etsi peli
-        </Button>
-        <Button
-          mode="contained"
-          icon="plus"
-          onPress={() => navigation.navigate('LisaaPeli')}
-          textColor="#ffffff"
-        >
-          Lisää peli
-        </Button>
-      </View>
-
       <FlatList
         data={pelit}
         renderItem={renderItem}
@@ -220,22 +195,12 @@ export default function SelaaPeleja({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#212121',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: {
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3, // Android
+    padding: 5,
+    marginBottom: 12,
+    elevation: 3,
   },
   title: {
     fontSize: 18,
@@ -248,13 +213,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 5,
   },
-  placeholderText: {
-    color: '#000000ff',
+  placeholder: {
     backgroundColor: '#ccc',
-    fontSize: 12,
-    width: 90,
-    height: 90,
-    textAlign: 'center', // vaakasuuntainen keskitys
-    textAlignVertical: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholder: {
+    backgroundColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  text: {
+    marginBottom: 2,
   },
 });

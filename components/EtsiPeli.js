@@ -108,67 +108,65 @@ export default function EtsiPeli({ navigation }) {
     </Card>
   );
 
-return (
-  <View style={{ flex: 1, backgroundColor: colors.background }}>
-  <FlatList
-    data={listaus}
-    renderItem={renderItem}
-    keyExtractor={(item) => item.id}
-    contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-    ListHeaderComponent={
-      <>
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: 'bold',
-            marginBottom: 12,
-            color: '#fff',
-          }}
-        >
-          Hae pelejä usealla ehdolla
-        </Text>
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <FlatList
+        data={listaus}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        ListHeaderComponent={
+          <>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: 'bold',
+                marginBottom: 12,
+                color: '#fff',
+              }}
+            >
+              Hae pelejä usealla ehdolla
+            </Text>
 
-        {/* Syöttökentät */}
-        <TextInput
-          label="Pelin nimi"
-          value={nimi}
-          onChangeText={setNimi}
-          style={{ marginBottom: 12 }}
-        />
-        <TextInput
-          label="Pelaajamäärä"
-          value={pelaajat}
-          onChangeText={setPelaajat}
-          keyboardType="numeric"
-          style={{ marginBottom: 12 }}
-        />
-        <TextInput
-          label="Kesto (min)"
-          value={kesto}
-          onChangeText={setKesto}
-          keyboardType="numeric"
-          style={{ marginBottom: 12 }}
-        />
+            {/* Syöttökentät */}
+            <TextInput
+              label="Pelin nimi"
+              value={nimi}
+              onChangeText={setNimi}
+              style={{ marginBottom: 12 }}
+            />
+            <TextInput
+              label="Pelaajamäärä"
+              value={pelaajat}
+              onChangeText={setPelaajat}
+              keyboardType="numeric"
+              style={{ marginBottom: 12 }}
+            />
+            <TextInput
+              label="Kesto (min)"
+              value={kesto}
+              onChangeText={setKesto}
+              keyboardType="numeric"
+              style={{ marginBottom: 12 }}
+            />
 
-        <Button
-          mode="contained"
-          onPress={hae}
-          style={{ marginBottom: 16 }}
-        >
-          Hae
-        </Button>
+            <Button mode="contained" onPress={hae} style={{ marginBottom: 16 }}>
+              Hae
+            </Button>
 
-        {/* Jos ei tuloksia */}
-        {listaus.length === 0 && (
-          <Text style={{ color: '#fff', textAlign: 'center', marginTop: 16 }}>
-            Ei tuloksia
-          </Text>
-        )}
-      </>
-    }
-  />
-  </View>
-);
+            {/* Jos ei tuloksia */}
+            {listaus.length === 0 && (
+              <Text
+                style={{ color: '#fff', textAlign: 'center', marginTop: 16 }}
+              >
+                Ei tuloksia
+              </Text>
+            )}
+          </>
+        }
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
