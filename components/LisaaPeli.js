@@ -66,7 +66,7 @@ export default function LisaaPeli({ navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
 

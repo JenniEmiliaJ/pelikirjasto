@@ -1,12 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  FlatList,
-  Alert,
-  ScrollView,
-} from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, Alert } from 'react-native';
 import { Card, Button, TextInput } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'react-native-paper';
@@ -48,9 +40,9 @@ export default function EtsiPeli({ navigation }) {
     const tulos = pelit.filter((peli) => {
       const peliNimi = peli.pelinNimi || '';
       const minP = Number(peli.minPelaajat) || 0;
-      const maxP = Number(peli.maxPelaajat) || 1000;
+      const maxP = Number(peli.maxPelaajat) || 100;
       const minK = Number(peli.minKesto) || 0;
-      const maxK = Number(peli.maxKesto) || 10000;
+      const maxK = Number(peli.maxKesto) || 1000;
 
       const nimiOk =
         peliNimi === '' || peliNimi.toUpperCase().includes(nimi.toUpperCase());
